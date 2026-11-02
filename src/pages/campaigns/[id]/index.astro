@@ -1,0 +1,52 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Balance from '../../../components/Balance.astro';
+import { first, all, fmtDateTime, BALANCE_SQL } from '../../../lib/db';
+import { formatMoney } from '../../../lib/money';
+import { renderMarkdown } from '../../../lib/md';
+const id = Number(Astro.params.id);
+const c = await first<any>('SELECT * FROM campaigns WHERE id=?', id);
+if (!c) return new Response('Not found', { status: 404 });
+const sessions = await all<any>(`SELECT s.*, (SELECT COUNT(*) FROM session_attendees a WHERE a.session_id=s.id AND a.attended=1) AS attendees
+  FROM sessions s WHERE campaign_id=? ORDER BY number DESC`, id);
+const party = await all<any>(`SELECT h.*, p.name AS player FROM characters h JOIN players p ON p.id=h.player_id
+  WHERE h.campaign_id=? AND h.archived_at IS NULL ORDER BY h.status, h.name`, id);
+const money = await first<any>(`SELECT
+  COALESCE((SELECT SUM(a.charge_cents) FROM session_attendees a JOIN sessions s ON s.id=a.session_id WHERE s.campaign_id=?1),0) AS charged,
+  COALESCE((SELECT SUM(amount_cents) FROM payments WHERE campaign_id=?1),0) AS paid`, id);
+const owing = (await all<any>(`${BALANCE_SQL} WHERE p.archived_at IS NULL`, id)).filter((r) => r.charged - r.paid !== 0);
+---
+<Layout title={c.name} active="campaigns">
+  <div class="row-between"><h1>{c.name}</h1><a class="btn" href={`/campaigns/${id}/edit`}>Edit</a></div>
+  <p class="muted"><span class="chip">{c.archived_at ? 'archived' : c.status}</span> {c.system}{c.schedule_note && ` · ${c.schedule_note}`}{c.is_paid ? ` · ${formatMoney(c.default_session_price_cents)}/session` : ' · free'}</p>
+  {c.description && <div class="md" set:html={renderMarkdown(c.description)} />}
+  <div class="actions"><a class="btn primary" href={`/sessions/new?campaign=${id}`}>+ Session</a><a class="btn" href={`/characters/new?campaign=${id}`}>+ Character</a></div>
+
+  {c.is_paid ? (<>
+    <h2>Money</h2>
+    <div class="card">
+      <div class="row-between"><span>Charged</span><strong>{formatMoney(money.charged)}</strong></div>
+      <div class="row-between"><span>Paid (to this campaign)</span><strong>{formatMoney(money.paid)}</strong></div>
+      <div class="row-between"><span>Outstanding</span><Balance cents={money.charged - money.paid} /></div>
+    </div>
+    {owing.map((r) => <div class="row-between muted"><a href={`/players/${r.id}`}>{r.name}</a><Balance cents={r.charged - r.paid} /></div>)}
+  </>) : null}
+
+  <h2>Party</h2>
+  {party.map((h) => (
+    <div class="card row-between">
+      <span><a href={`/characters/${h.id}/edit`}><strong>{h.name}</strong></a> <span class="muted">{h.class} {h.level} · {h.player}</span></span>
+      <span>{h.status !== 'active' && <span class="chip">{h.status}</span>} {h.dndbeyond_url && <a href={h.dndbeyond_url} target="_blank" rel="noopener noreferrer">D&amp;D Beyond ↗</a>}</span>
+    </div>
+  ))}
+  {party.length === 0 && <p class="muted">No characters yet.</p>}
+
+  <h2>Sessions</h2>
+  {sessions.map((s) => (
+    <div class="card"><a class="row" href={`/sessions/${s.id}`}>
+      <div class="row-between"><strong>#{s.number} {s.title}</strong><span class="chip">{s.status}</span></div>
+      <div class="muted">{fmtDateTime(s.starts_at)} · {s.attendees} attended</div>
+    </a></div>
+  ))}
+  {sessions.length === 0 && <p class="muted">No sessions yet.</p>}
+</Layout>

@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Balance from '../components/Balance.astro';
+import { all, first, nowLocal, fmtDateTime, BALANCE_SQL } from '../lib/db';
+const now = nowLocal().iso;
+const next = await first<any>(`SELECT s.*, c.name AS campaign FROM sessions s JOIN campaigns c ON c.id=s.campaign_id
+  WHERE s.status='planned' AND s.starts_at>=? AND c.archived_at IS NULL ORDER BY s.starts_at LIMIT 1`, now);
+const nextAtt = next ? await all<any>(`SELECT p.name FROM session_attendees a JOIN players p ON p.id=a.player_id WHERE a.session_id=? ORDER BY p.name`, next.id) : [];
+const recent = await all<any>(`SELECT s.*, c.name AS campaign FROM sessions s JOIN campaigns c ON c.id=s.campaign_id
+  WHERE s.starts_at<? AND s.status!='cancelled' ORDER BY s.starts_at DESC LIMIT 4`, now);
+const owing = (await all<any>(`${BALANCE_SQL} WHERE p.archived_at IS NULL`, null)).map((r) => ({ ...r, bal: r.charged - r.paid })).filter((r) => r.bal > 0).sort((a, b) => b.bal - a.bal);
+const campaigns = await all<any>(`SELECT * FROM campaigns WHERE status='active' AND archived_at IS NULL ORDER BY name`);
+---
+<Layout title="Dashboard" active="home">
+  <h1>🔥 TTRPG Hearth</h1>
+  <h2>Next session</h2>
+  {next ? (
+    <div class="card"><a class="row" href={`/sessions/${next.id}`}>
+      <div class="row-between"><strong>{next.campaign} #{next.number}{next.title && ` · ${next.title}`}</strong></div>
+      <div class="muted">{fmtDateTime(next.starts_at)}{nextAtt.length > 0 && ` · ${nextAtt.map((a) => a.name).join(', ')}`}</div>
+    </a></div>
+  ) : <p class="muted">Nothing scheduled. <a href="/sessions/new">Schedule one</a>.</p>}
+
+  <h2>Who owes money</h2>
+  {owing.map((r) => <div class="card row-between"><a href={`/players/${r.id}`}>{r.name}</a><Balance cents={r.bal} /></div>)}
+  {owing.length === 0 && <p class="muted">Everyone is settled up. ✓</p>}
+
+  <h2>Recent sessions</h2>
+  {recent.map((s) => (
+    <div class="card"><a class="row" href={`/sessions/${s.id}`}>
+      <div class="row-between"><strong>{s.campaign} #{s.number}{s.title && ` · ${s.title}`}</strong><span class="chip">{s.status}</span></div>
+      <div class="muted">{fmtDateTime(s.starts_at)}</div>
+    </a></div>
+  ))}
+  {recent.length === 0 && <p class="muted">No past sessions yet.</p>}
+
+  <h2>Active campaigns</h2>
+  {campaigns.map((c) => <div class="card"><a class="row" href={`/campaigns/${c.id}`}><strong>{c.name}</strong> <span class="muted">{c.schedule_note}</span></a></div>)}
+  {campaigns.length === 0 && <p class="muted">No active campaigns. <a href="/campaigns/new">Create one</a>.</p>}
+
+  <div class="actions"><a class="btn primary" href="/sessions/new">+ Session</a><a class="btn" href="/players/new">+ Player</a><a class="btn" href="/payments/new">+ Payment</a><a class="btn" href="/export">Export</a></div>
+</Layout>

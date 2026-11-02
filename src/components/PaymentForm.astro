@@ -1,0 +1,21 @@
+---
+import { METHODS } from '../lib/db';
+import { centsToDecimal } from '../lib/money';
+const { y, players, campaigns, playerId, campaignId, sessionId, today } = Astro.props as any;
+---
+<div class="grid2">
+  <div><label for="player_id">Player</label>
+    <select id="player_id" name="player_id">{players.map((p: any) => <option value={p.id} selected={p.id === (y?.player_id ?? playerId)}>{p.name}</option>)}</select></div>
+  <div><label for="amount">Amount (€)</label>
+    <input id="amount" name="amount" inputmode="decimal" required autofocus value={y ? centsToDecimal(y.amount_cents) : ''} /></div>
+</div>
+<div class="grid2">
+  <div><label for="method">Method</label><select id="method" name="method">{METHODS.map((m) => <option selected={y?.method === m}>{m}</option>)}</select></div>
+  <div><label for="paid_on">Date</label><input id="paid_on" name="paid_on" type="date" required value={y?.paid_on ?? today} /></div>
+</div>
+{sessionId
+  ? <input type="hidden" name="session_id" value={sessionId} />
+  : <><label for="campaign_id">Campaign (optional — leave blank for general credit)</label>
+    <select id="campaign_id" name="campaign_id"><option value="">None</option>{campaigns.map((c: any) => <option value={c.id} selected={c.id === (y?.campaign_id ?? campaignId)}>{c.name}</option>)}</select></>}
+<label for="note">Note</label>
+<input id="note" name="note" value={y?.note ?? ''} />

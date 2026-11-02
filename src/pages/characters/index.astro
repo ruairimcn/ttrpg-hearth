@@ -1,0 +1,17 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { all } from '../../lib/db';
+const rows = await all<any>(`SELECT h.*, p.name AS player, c.name AS campaign FROM characters h
+  JOIN players p ON p.id=h.player_id JOIN campaigns c ON c.id=h.campaign_id
+  WHERE h.archived_at IS NULL ORDER BY h.status, c.name, h.name`);
+---
+<Layout title="Characters" active="players">
+  <div class="row-between"><h1>Characters</h1><a class="btn primary" href="/characters/new">+ New</a></div>
+  {rows.map((h) => (
+    <div class="card row-between">
+      <span><a href={`/characters/${h.id}/edit`}><strong>{h.name}</strong></a><br /><span class="muted">{h.class} {h.level} · {h.player} · {h.campaign}</span></span>
+      <span>{h.status !== 'active' && <span class="chip">{h.status}</span>} {h.dndbeyond_url && <a href={h.dndbeyond_url} target="_blank" rel="noopener noreferrer">D&amp;D Beyond ↗</a>}</span>
+    </div>
+  ))}
+  {rows.length === 0 && <p class="muted">No characters yet.</p>}
+</Layout>

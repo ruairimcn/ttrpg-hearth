@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { all, nowLocal, fmtDateTime } from '../../lib/db';
+const view = Astro.url.searchParams.get('view') ?? 'upcoming';
+const camp = Number(Astro.url.searchParams.get('campaign')) || null;
+const now = nowLocal().iso;
+const where = view === 'past' ? 's.starts_at < ?2 ORDER BY s.starts_at DESC' : view === 'all' ? '?2 IS NOT NULL ORDER BY s.starts_at DESC' : 's.starts_at >= ?2 ORDER BY s.starts_at ASC';
+const rows = await all<any>(`SELECT s.*, c.name AS campaign FROM sessions s JOIN campaigns c ON c.id=s.campaign_id
+  WHERE (?1 IS NULL OR s.campaign_id=?1) AND ${where} LIMIT 200`, camp, now);
+const link = (v: string) => `/sessions?view=${v}${camp ? `&campaign=${camp}` : ''}`;
+---
+<Layout title="Sessions" active="sessions">
+  <div class="row-between"><h1>Sessions</h1><a class="btn primary" href={`/sessions/new${camp ? `?campaign=${camp}` : ''}`}>+ New</a></div>
+  <div class="filters">
+    {['upcoming', 'past', 'all'].map((v) => <a href={link(v)} aria-current={view === v ? 'true' : undefined}>{v}</a>)}
+  </div>
+  {rows.map((s) => (
+    <div class="card"><a class="row" href={`/sessions/${s.id}`}>
+      <div class="row-between"><strong>{s.campaign} #{s.number}{s.title && ` · ${s.title}`}</strong><span class="chip">{s.status}</span></div>
+      <div class="muted">{fmtDateTime(s.starts_at)}</div>
+    </a></div>
+  ))}
+  {rows.length === 0 && <p class="muted">Nothing here.</p>}
+</Layout>

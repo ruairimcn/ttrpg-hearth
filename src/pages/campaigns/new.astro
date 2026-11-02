@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CampaignForm from '../../components/CampaignForm.astro';
+import { run, str, oneOf, CAMPAIGN_STATUSES } from '../../lib/db';
+import { parseMoney } from '../../lib/money';
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const price = parseMoney(str(f, 'price') || '0');
+  if (!str(f, 'name')) error = 'Name is required.';
+  else if (price === null) error = 'Price must be like 15 or 15.50.';
+  else {
+    const r = await run(`INSERT INTO campaigns (name,system,status,description,schedule_note,is_paid,default_session_price_cents) VALUES (?,?,?,?,?,?,?)`,
+      str(f, 'name'), str(f, 'system') || 'D&D 5e', oneOf(str(f, 'status'), CAMPAIGN_STATUSES, 'planned'),
+      str(f, 'description'), str(f, 'schedule_note'), str(f, 'is_paid') === '1' ? 1 : 0, price);
+    return Astro.redirect(`/campaigns/${r.meta.last_row_id}`);
+  }
+}
+---
+<Layout title="New campaign" active="campaigns">
+  <h1>New campaign</h1>
+  {error && <p class="err">{error}</p>}
+  <form method="post"><CampaignForm /><div class="actions"><button class="primary">Create</button><a class="btn" href="/campaigns">Cancel</a></div></form>
+</Layout>

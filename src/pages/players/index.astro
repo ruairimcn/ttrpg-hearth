@@ -1,0 +1,20 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Balance from '../../components/Balance.astro';
+import { all, BALANCE_SQL } from '../../lib/db';
+const showArchived = Astro.url.searchParams.get('archived') === '1';
+const rows = await all<any>(`${BALANCE_SQL.replace('p.name,', 'p.name, p.contact, p.active, p.archived_at,')} WHERE (?2=1 OR p.archived_at IS NULL) ORDER BY p.archived_at IS NOT NULL, p.active DESC, p.name`, null, showArchived ? 1 : 0);
+const chars = await all<any>(`SELECT player_id, GROUP_CONCAT(name, ', ') AS names FROM characters WHERE archived_at IS NULL AND status='active' GROUP BY player_id`);
+const byPlayer = new Map(chars.map((c) => [c.player_id, c.names]));
+---
+<Layout title="Players" active="players">
+  <div class="row-between"><h1>Players</h1><a class="btn primary" href="/players/new">+ New</a></div>
+  {rows.map((p) => (
+    <div class="card"><a class="row" href={`/players/${p.id}`}>
+      <div class="row-between"><strong>{p.name}</strong><Balance cents={p.charged - p.paid} /></div>
+      <div class="muted">{byPlayer.get(p.id) ?? 'no characters'}{p.archived_at ? ' · archived' : !p.active ? ' · inactive' : ''}</div>
+    </a></div>
+  ))}
+  {rows.length === 0 && <p class="muted">No players yet.</p>}
+  <p class="muted"><a href="/characters">All characters</a> · <a href={showArchived ? '/players' : '/players?archived=1'}>{showArchived ? 'Hide' : 'Show'} archived</a></p>
+</Layout>

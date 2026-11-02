@@ -1,0 +1,26 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { first, all, fmtDateTime } from '../../../lib/db';
+import { formatMoney } from '../../../lib/money';
+import { renderMarkdown } from '../../../lib/md';
+const id = Number(Astro.params.id);
+const s = await first<any>(`SELECT s.*, c.name AS campaign, c.is_paid FROM sessions s JOIN campaigns c ON c.id=s.campaign_id WHERE s.id=?`, id);
+if (!s) return new Response('Not found', { status: 404 });
+const att = await all<any>(`SELECT a.*, p.name AS player, h.name AS character FROM session_attendees a
+  JOIN players p ON p.id=a.player_id LEFT JOIN characters h ON h.id=a.character_id WHERE a.session_id=? ORDER BY a.attended DESC, p.name`, id);
+---
+<Layout title={`#${s.number} ${s.title}`} active="sessions">
+  <div class="row-between"><h1>#{s.number} {s.title}</h1><a class="btn" href={`/sessions/${id}/edit`}>Edit</a></div>
+  <p class="muted"><a href={`/campaigns/${s.campaign_id}`}>{s.campaign}</a> · {fmtDateTime(s.starts_at)} · <span class="chip">{s.status}</span>{s.is_paid ? ` · ${formatMoney(s.price_cents)} each` : ''}</p>
+  <h2>Attendees</h2>
+  {att.map((a) => (
+    <div class="card row-between">
+      <span><a href={`/players/${a.player_id}`}><strong>{a.player}</strong></a>{a.character && <span class="muted"> as {a.character}</span>}</span>
+      <span>{a.attended ? '✓' : <span class="muted">absent</span>} {a.charge_cents > 0 && <span class="muted">{formatMoney(a.charge_cents)}</span>}
+        {a.charge_cents > 0 && <a href={`/payments/new?player=${a.player_id}&session=${id}`}> + pay</a>}</span>
+    </div>
+  ))}
+  {att.length === 0 && <p class="muted">No attendees recorded.</p>}
+  {s.prep_notes && <><h2>Prep notes</h2><div class="md" set:html={renderMarkdown(s.prep_notes)} /></>}
+  {s.recap && <><h2>Recap</h2><div class="md" set:html={renderMarkdown(s.recap)} /></>}
+</Layout>

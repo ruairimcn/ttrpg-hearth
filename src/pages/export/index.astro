@@ -1,0 +1,19 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { nowLocal } from '../../lib/db';
+const year = nowLocal().date.slice(0, 4);
+---
+<Layout title="Export">
+  <h1>Export CSV</h1>
+  <p class="muted">Opens in Excel, Numbers or Sheets. Leave dates blank for everything. Amounts are in decimal euros.</p>
+  <form method="get" class="card" id="f">
+    <div class="grid2">
+      <div><label for="from">From</label><input id="from" type="date" name="from" value={`${year}-01-01`} /></div>
+      <div><label for="to">To</label><input id="to" type="date" name="to" value={`${year}-12-31`} /></div>
+    </div>
+    <div class="actions">
+      <button formaction="/export/payments.csv" class="primary">Download payments</button>
+      <button formaction="/export/sessions.csv">Download sessions</button>
+    </div>
+  </form>
+</Layout>

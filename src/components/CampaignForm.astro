@@ -1,0 +1,22 @@
+---
+import { CAMPAIGN_STATUSES } from '../lib/db';
+import { centsToDecimal } from '../lib/money';
+const { c } = Astro.props as { c?: any };
+---
+<label for="name">Name</label>
+<input id="name" name="name" required value={c?.name ?? ''} />
+<div class="grid2">
+  <div><label for="system">System</label><input id="system" name="system" value={c?.system ?? 'D&D 5e'} /></div>
+  <div><label for="status">Status</label>
+    <select id="status" name="status">{CAMPAIGN_STATUSES.map((s) => <option selected={(c?.status ?? 'planned') === s}>{s}</option>)}</select></div>
+</div>
+<label for="schedule_note">Schedule note</label>
+<input id="schedule_note" name="schedule_note" value={c?.schedule_note ?? ''} placeholder="Mondays 19:00" />
+<label for="description">Description</label>
+<textarea id="description" name="description">{c?.description ?? ''}</textarea>
+<div class="grid2">
+  <div><label for="price">Default session price (€)</label>
+    <input id="price" name="price" inputmode="decimal" value={centsToDecimal(c?.default_session_price_cents ?? 0)} /></div>
+  <div><label for="is_paid">Paid campaign</label>
+    <select id="is_paid" name="is_paid"><option value="1" selected={!!c?.is_paid}>Yes</option><option value="0" selected={!c?.is_paid}>No</option></select></div>
+</div>

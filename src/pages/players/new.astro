@@ -1,0 +1,23 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { run, str } from '../../lib/db';
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  if (!str(f, 'name')) error = 'Name is required.';
+  else {
+    const r = await run('INSERT INTO players (name,contact,notes) VALUES (?,?,?)', str(f, 'name'), str(f, 'contact'), str(f, 'notes'));
+    return Astro.redirect(`/players/${r.meta.last_row_id}`);
+  }
+}
+---
+<Layout title="New player" active="players">
+  <h1>New player</h1>
+  {error && <p class="err">{error}</p>}
+  <form method="post">
+    <label for="name">Name</label><input id="name" name="name" required autofocus />
+    <label for="contact">Email or phone (optional)</label><input id="contact" name="contact" />
+    <label for="notes">Notes</label><textarea id="notes" name="notes" style="min-height:5rem"></textarea>
+    <div class="actions"><button class="primary">Create</button><a class="btn" href="/players">Cancel</a></div>
+  </form>
+</Layout>

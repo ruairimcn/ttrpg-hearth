@@ -1,0 +1,22 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { all } from '../../lib/db';
+import { formatMoney } from '../../lib/money';
+const showArchived = Astro.url.searchParams.get('archived') === '1';
+const rows = await all<any>(`
+  SELECT c.*,
+   (SELECT COUNT(*) FROM sessions s WHERE s.campaign_id=c.id) AS sessions,
+   (SELECT COUNT(*) FROM characters h WHERE h.campaign_id=c.id AND h.archived_at IS NULL) AS chars
+  FROM campaigns c WHERE (?1=1 OR c.archived_at IS NULL) ORDER BY c.archived_at IS NOT NULL, c.status='finished', c.name`, showArchived ? 1 : 0);
+---
+<Layout title="Campaigns" active="campaigns">
+  <div class="row-between"><h1>Campaigns</h1><a class="btn primary" href="/campaigns/new">+ New</a></div>
+  {rows.map((c) => (
+    <div class="card"><a class="row" href={`/campaigns/${c.id}`}>
+      <div class="row-between"><strong>{c.name}</strong><span class="chip">{c.archived_at ? 'archived' : c.status}</span></div>
+      <div class="muted">{c.system} · {c.sessions} sessions · {c.chars} characters{c.is_paid ? ` · ${formatMoney(c.default_session_price_cents)}/session` : ' · free'}</div>
+    </a></div>
+  ))}
+  {rows.length === 0 && <p class="muted">No campaigns yet.</p>}
+  <p class="muted"><a href={showArchived ? '/campaigns' : '/campaigns?archived=1'}>{showArchived ? 'Hide' : 'Show'} archived</a></p>
+</Layout>

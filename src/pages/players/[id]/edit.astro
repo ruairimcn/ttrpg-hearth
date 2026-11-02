@@ -1,0 +1,40 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { first, run, str, NOW } from '../../../lib/db';
+const id = Number(Astro.params.id);
+const p = await first<any>('SELECT * FROM players WHERE id=?', id);
+if (!p) return new Response('Not found', { status: 404 });
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const act = str(f, 'action');
+  if (act === 'archive') { await run(`UPDATE players SET archived_at=${NOW}, updated_at=${NOW} WHERE id=?`, id); return Astro.redirect('/players'); }
+  if (act === 'unarchive') { await run(`UPDATE players SET archived_at=NULL, updated_at=${NOW} WHERE id=?`, id); return Astro.redirect(`/players/${id}`); }
+  if (act === 'delete') {
+    const used = await first<any>(`SELECT (SELECT COUNT(*) FROM payments WHERE player_id=?1)+(SELECT COUNT(*) FROM session_attendees WHERE player_id=?1)+(SELECT COUNT(*) FROM characters WHERE player_id=?1) AS n`, id);
+    if (used!.n > 0) error = 'Cannot delete: this player has characters, attendance or payments. Archive instead.';
+    else { await run('DELETE FROM players WHERE id=?', id); return Astro.redirect('/players'); }
+  } else if (!str(f, 'name')) error = 'Name is required.';
+  else {
+    await run(`UPDATE players SET name=?,contact=?,notes=?,active=?,updated_at=${NOW} WHERE id=?`, str(f, 'name'), str(f, 'contact'), str(f, 'notes'), str(f, 'active') === '0' ? 0 : 1, id);
+    return Astro.redirect(`/players/${id}`);
+  }
+}
+---
+<Layout title={`Edit ${p.name}`} active="players">
+  <h1>Edit player</h1>
+  {error && <p class="err">{error}</p>}
+  <form method="post">
+    <label for="name">Name</label><input id="name" name="name" required value={p.name} />
+    <label for="contact">Email or phone</label><input id="contact" name="contact" value={p.contact} />
+    <label for="active">Active (offered when marking attendance)</label>
+    <select id="active" name="active"><option value="1" selected={!!p.active}>Active</option><option value="0" selected={!p.active}>Inactive</option></select>
+    <label for="notes">Notes</label><textarea id="notes" name="notes" style="min-height:5rem">{p.notes}</textarea>
+    <div class="actions"><button class="primary">Save</button><a class="btn" href={`/players/${id}`}>Cancel</a></div>
+  </form>
+  <h2>Danger zone</h2>
+  <form method="post" class="actions">
+    {p.archived_at ? <button name="action" value="unarchive">Restore</button> : <button name="action" value="archive">Archive</button>}
+    <button class="danger" name="action" value="delete" onclick="return confirm('Permanently delete this player? Only possible if they have no history.')">Delete (mistakes only)</button>
+  </form>
+</Layout>
