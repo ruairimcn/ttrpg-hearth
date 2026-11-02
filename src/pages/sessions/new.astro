@@ -1,0 +1,41 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SessionForm from '../../components/SessionForm.astro';
+import { all, run, nowLocal } from '../../lib/db';
+import { parseSessionForm, saveAttendees, attendeeCandidates } from '../../lib/sessions';
+const campaigns = await all<any>(`SELECT id,name FROM campaigns WHERE archived_at IS NULL ORDER BY status='active' DESC, name`);
+if (campaigns.length === 0) return Astro.redirect('/campaigns/new');
+let campaignId = Number(Astro.url.searchParams.get('campaign')) || campaigns[0].id;
+let error = '';
+let s: any = null;
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const parsed = await parseSessionForm(f, campaignId);
+  campaignId = Number(f.get('campaign_id')) || campaignId;
+  if ('error' in parsed) { error = parsed.error; }
+  else {
+    const i = parsed.input;
+    const next = (await all<any>('SELECT COALESCE(MAX(number),0)+1 AS n FROM sessions WHERE campaign_id=?', i.campaign_id))[0].n;
+    const r = await run(`INSERT INTO sessions (campaign_id,number,title,starts_at,status,price_cents,prep_notes,recap) VALUES (?,?,?,?,?,?,?,?)`,
+      i.campaign_id, next, i.title, i.starts_at, i.status, i.price_cents, i.prep_notes, i.recap);
+    await saveAttendees(r.meta.last_row_id as number, i, f);
+    return Astro.redirect(`/sessions/${r.meta.last_row_id}`);
+  }
+}
+if (!s) {
+  // sensible default: next week, same weekday/time is not guessable; default to today 19:00
+  s = { starts_at: nowLocal().date + 'T19:00', status: 'planned', price_cents: 0 };
+}
+const cp = (await all<any>('SELECT default_session_price_cents AS p FROM campaigns WHERE id=?', campaignId))[0];
+s.price_cents = cp?.p ?? 0;
+const candidates = await attendeeCandidates(campaignId, null);
+const characters = await all<any>(`SELECT * FROM characters WHERE archived_at IS NULL AND status='active'`);
+---
+<Layout title="New session" active="sessions">
+  <h1>New session</h1>
+  {error && <p class="err">{error}</p>}
+  <form method="post">
+    <SessionForm s={s} isNew campaigns={campaigns} campaignId={campaignId} candidates={candidates} characters={characters} />
+    <div class="actions"><button class="primary">Create session</button><a class="btn" href="/sessions">Cancel</a></div>
+  </form>
+</Layout>

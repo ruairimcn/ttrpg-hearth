@@ -1,0 +1,32 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CharacterForm from '../../components/CharacterForm.astro';
+import { all, run, str, int, oneOf, safeUrl, CHARACTER_STATUSES } from '../../lib/db';
+const players = await all<any>('SELECT id,name FROM players WHERE archived_at IS NULL ORDER BY name');
+const campaigns = await all<any>('SELECT id,name FROM campaigns WHERE archived_at IS NULL ORDER BY status=\'active\' DESC, name');
+const playerId = Number(Astro.url.searchParams.get('player')) || players[0]?.id;
+const campaignId = Number(Astro.url.searchParams.get('campaign')) || campaigns[0]?.id;
+let error = '';
+if (players.length === 0) error = 'Add a player first.';
+else if (campaigns.length === 0) error = 'Add a campaign first.';
+if (Astro.request.method === 'POST' && !error) {
+  const f = await Astro.request.formData();
+  const url = str(f, 'dndbeyond_url');
+  if (!str(f, 'name')) error = 'Name is required.';
+  else if (url && !safeUrl(url)) error = 'That link is not a valid http(s) URL.';
+  else {
+    const r = await run(`INSERT INTO characters (player_id,campaign_id,name,class,level,dndbeyond_url,status,notes) VALUES (?,?,?,?,?,?,?,?)`,
+      int(f, 'player_id'), int(f, 'campaign_id'), str(f, 'name'), str(f, 'class'), int(f, 'level', 1), safeUrl(url),
+      oneOf(str(f, 'status'), CHARACTER_STATUSES, 'active'), str(f, 'notes'));
+    return Astro.redirect(`/players/${int(f, 'player_id')}`);
+  }
+}
+---
+<Layout title="New character" active="players">
+  <h1>New character</h1>
+  {error && <p class="err">{error}</p>}
+  {players.length > 0 && campaigns.length > 0 && (
+    <form method="post"><CharacterForm players={players} campaigns={campaigns} playerId={playerId} campaignId={campaignId} />
+      <div class="actions"><button class="primary">Create</button><a class="btn" href="/characters">Cancel</a></div></form>
+  )}
+</Layout>

@@ -1,0 +1,32 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PaymentForm from '../../components/PaymentForm.astro';
+import { all, run, nowLocal, str } from '../../lib/db';
+import { parsePaymentForm } from '../../lib/payments';
+const players = await all<any>('SELECT id,name FROM players WHERE archived_at IS NULL ORDER BY active DESC, name');
+const campaigns = await all<any>('SELECT id,name FROM campaigns WHERE archived_at IS NULL ORDER BY name');
+const q = Astro.url.searchParams;
+const playerId = Number(q.get('player')) || players[0]?.id;
+const sessionId = Number(q.get('session')) || null;
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const parsed = await parsePaymentForm(f);
+  if ('error' in parsed) error = parsed.error!;
+  else {
+    const i = parsed.input;
+    await run(`INSERT INTO payments (player_id,campaign_id,session_id,amount_cents,currency,method,paid_on,note) VALUES (?,?,?,?,'EUR',?,?,?)`,
+      i.player_id, i.campaign_id, i.session_id, i.amount_cents, i.method, i.paid_on, i.note);
+    const back = str(f, 'back');
+    return Astro.redirect(back.startsWith('/') && !back.startsWith('//') ? back : `/players/${i.player_id}`);
+  }
+}
+---
+<Layout title="Record payment" active="payments">
+  <h1>Record payment</h1>
+  {error && <p class="err">{error}</p>}
+  {players.length === 0 ? <p class="muted">Add a player first.</p> : (
+    <form method="post"><PaymentForm players={players} campaigns={campaigns} playerId={playerId} sessionId={sessionId} today={nowLocal().date} />
+      <div class="actions"><button class="primary">Save payment</button><a class="btn" href="/payments">Cancel</a></div></form>
+  )}
+</Layout>

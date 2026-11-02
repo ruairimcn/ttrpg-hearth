@@ -1,0 +1,45 @@
+---
+import { SESSION_STATUSES } from '../lib/db';
+import { centsToDecimal } from '../lib/money';
+const { s, campaigns, campaignId, candidates, characters, isNew } = Astro.props as any;
+const chosen = Number(campaignId);
+---
+{isNew
+  ? <><label for="campaign_id">Campaign</label>
+    <select id="campaign_id" name="campaign_id" onchange="location.search=`?campaign=${this.value}`">{campaigns.map((c: any) => <option value={c.id} selected={c.id === chosen}>{c.name}</option>)}</select></>
+  : <input type="hidden" name="campaign_id" value={chosen} />}
+<label for="title">Title</label>
+<input id="title" name="title" value={s?.title ?? ''} placeholder="Optional" />
+<div class="grid2">
+  <div><label for="starts_at">Date &amp; time</label><input id="starts_at" name="starts_at" type="datetime-local" required value={s?.starts_at ?? ''} /></div>
+  <div><label for="status">Status</label>
+    <select id="status" name="status">{SESSION_STATUSES.map((x) => <option selected={(s?.status ?? 'planned') === x}>{x}</option>)}</select></div>
+</div>
+<label for="price">Price per attendee (€) — blank = campaign default</label>
+<input id="price" name="price" inputmode="decimal" value={s ? centsToDecimal(s.price_cents) : ''} />
+
+<h2>Attendees</h2>
+<p class="muted">Tick who attended. Charges are created when the session is marked <b>played</b> in a paid campaign.</p>
+{candidates.map((p: any) => {
+  const checked = s ? !!p.attended : p.in_party > 0;
+  const mine = characters.filter((h: any) => h.player_id === p.id);
+  return (
+    <div class="attendee">
+      <input type="hidden" name="pid" value={p.id} />
+      <input type="checkbox" id={`att_${p.id}`} name={`att_${p.id}`} value="1" checked={checked} />
+      <label for={`att_${p.id}`}>{p.name}</label>
+      {mine.length > 0 && (
+        <select name={`chr_${p.id}`} aria-label={`Character for ${p.name}`}>
+          <option value="">No character</option>
+          {mine.map((h: any) => <option value={h.id} selected={p.character_id ? p.character_id === h.id : h.campaign_id === chosen && h === mine.find((m: any) => m.campaign_id === chosen)}>{h.name} ({h.class} {h.level})</option>)}
+        </select>
+      )}
+    </div>
+  );
+})}
+{candidates.length === 0 && <p class="muted">No players yet — <a href="/players/new">add one</a>.</p>}
+
+<label for="prep_notes">Prep notes (markdown)</label>
+<textarea id="prep_notes" name="prep_notes">{s?.prep_notes ?? ''}</textarea>
+<label for="recap">Recap (markdown)</label>
+<textarea id="recap" name="recap">{s?.recap ?? ''}</textarea>

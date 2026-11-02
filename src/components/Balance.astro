@@ -1,0 +1,7 @@
+---
+import { describeBalance } from '../lib/ledger';
+import { formatMoney } from '../lib/money';
+const { cents } = Astro.props as { cents: number };
+const d = describeBalance(cents);
+---
+<span class={d.kind}>{d.kind === 'settled' ? 'Settled' : `${formatMoney(Math.abs(cents))} ${d.label}`}</span>

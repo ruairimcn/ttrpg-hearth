@@ -1,0 +1,33 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { all, fmtDate } from '../../lib/db';
+import { formatMoney } from '../../lib/money';
+import { paymentFilter, queryPayments } from '../../lib/ledgerQuery';
+const f = paymentFilter(Astro.url.searchParams);
+const [rows, players, campaigns] = await Promise.all([
+  queryPayments(f),
+  all<any>('SELECT id,name FROM players ORDER BY name'),
+  all<any>('SELECT id,name FROM campaigns ORDER BY name'),
+]);
+const total = rows.reduce((t, r) => t + r.amount_cents, 0);
+const qs = new URLSearchParams(Object.entries({ player: f.player ?? '', campaign: f.campaign ?? '', from: f.from, to: f.to }).filter(([, v]) => v !== '').map(([k, v]) => [k, String(v)])).toString();
+---
+<Layout title="Payments" active="payments">
+  <div class="row-between"><h1>Payments</h1><a class="btn primary" href="/payments/new">+ Record</a></div>
+  <form method="get" class="card">
+    <div class="grid2">
+      <div><label for="player">Player</label><select id="player" name="player"><option value="">All</option>{players.map((p) => <option value={p.id} selected={p.id === f.player}>{p.name}</option>)}</select></div>
+      <div><label for="campaign">Campaign</label><select id="campaign" name="campaign"><option value="">All</option>{campaigns.map((c) => <option value={c.id} selected={c.id === f.campaign}>{c.name}</option>)}</select></div>
+      <div><label for="from">From</label><input id="from" type="date" name="from" value={f.from} /></div>
+      <div><label for="to">To</label><input id="to" type="date" name="to" value={f.to} /></div>
+    </div>
+    <div class="actions"><button>Filter</button><a class="btn" href="/payments">Reset</a><a class="btn" href={`/export/payments.csv${qs ? `?${qs}` : ''}`}>Download CSV</a></div>
+  </form>
+  <p><strong>{rows.length}</strong> payments · <strong>{formatMoney(total)}</strong></p>
+  <div class="scroll"><table class="table">
+    {rows.map((y) => (
+      <tr><td>{fmtDate(y.paid_on)}<div class="muted"><a href={`/players/${y.player_id}`}>{y.player}</a> · {y.method}{y.campaign && ` · ${y.campaign}`}{y.session_number && ` #${y.session_number}`}</div></td>
+        <td class="num">{formatMoney(y.amount_cents, y.currency)}<div><a href={`/payments/${y.id}/edit`}>edit</a></div></td></tr>
+    ))}
+  </table></div>
+</Layout>

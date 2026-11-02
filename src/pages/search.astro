@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { all } from '../lib/db';
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+const like = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+const [campaigns, players, characters] = q ? await Promise.all([
+  all<any>(`SELECT id,name,system,status FROM campaigns WHERE name LIKE ?1 ESCAPE '\\' OR description LIKE ?1 ESCAPE '\\' ORDER BY name LIMIT 25`, like),
+  all<any>(`SELECT id,name,contact FROM players WHERE name LIKE ?1 ESCAPE '\\' OR contact LIKE ?1 ESCAPE '\\' ORDER BY name LIMIT 25`, like),
+  all<any>(`SELECT h.id,h.name,h.class,h.level,p.name AS player FROM characters h JOIN players p ON p.id=h.player_id
+    WHERE h.name LIKE ?1 ESCAPE '\\' OR h.class LIKE ?1 ESCAPE '\\' ORDER BY h.name LIMIT 25`, like),
+]) : [[], [], []];
+---
+<Layout title="Search">
+  <h1>Search</h1>
+  {!q && <p class="muted">Type something in the box above.</p>}
+  {q && campaigns.length + players.length + characters.length === 0 && <p class="muted">No matches for “{q}”.</p>}
+  {campaigns.length > 0 && <h2>Campaigns</h2>}
+  {campaigns.map((c) => <div class="card"><a class="row" href={`/campaigns/${c.id}`}><strong>{c.name}</strong> <span class="muted">{c.system} · {c.status}</span></a></div>)}
+  {players.length > 0 && <h2>Players</h2>}
+  {players.map((p) => <div class="card"><a class="row" href={`/players/${p.id}`}><strong>{p.name}</strong> <span class="muted">{p.contact}</span></a></div>)}
+  {characters.length > 0 && <h2>Characters</h2>}
+  {characters.map((h) => <div class="card"><a class="row" href={`/characters/${h.id}/edit`}><strong>{h.name}</strong> <span class="muted">{h.class} {h.level} · {h.player}</span></a></div>)}
+</Layout>

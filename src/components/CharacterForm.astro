@@ -1,0 +1,22 @@
+---
+import { CHARACTER_STATUSES } from '../lib/db';
+const { h, players, campaigns, playerId, campaignId } = Astro.props as any;
+---
+<label for="name">Character name</label>
+<input id="name" name="name" required value={h?.name ?? ''} />
+<div class="grid2">
+  <div><label for="player_id">Player</label>
+    <select id="player_id" name="player_id">{players.map((p: any) => <option value={p.id} selected={p.id === (h?.player_id ?? playerId)}>{p.name}</option>)}</select></div>
+  <div><label for="campaign_id">Campaign</label>
+    <select id="campaign_id" name="campaign_id">{campaigns.map((c: any) => <option value={c.id} selected={c.id === (h?.campaign_id ?? campaignId)}>{c.name}</option>)}</select></div>
+</div>
+<div class="grid2">
+  <div><label for="class">Class</label><input id="class" name="class" value={h?.class ?? ''} /></div>
+  <div><label for="level">Level</label><input id="level" name="level" type="number" min="0" max="30" value={h?.level ?? 1} /></div>
+</div>
+<label for="dndbeyond_url">D&amp;D Beyond link</label>
+<input id="dndbeyond_url" name="dndbeyond_url" type="url" inputmode="url" placeholder="https://www.dndbeyond.com/characters/…" value={h?.dndbeyond_url ?? ''} />
+<label for="status">Status</label>
+<select id="status" name="status">{CHARACTER_STATUSES.map((s) => <option selected={(h?.status ?? 'active') === s}>{s}</option>)}</select>
+<label for="notes">Notes</label>
+<textarea id="notes" name="notes" style="min-height:5rem">{h?.notes ?? ''}</textarea>

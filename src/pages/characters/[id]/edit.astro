@@ -1,0 +1,39 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import CharacterForm from '../../../components/CharacterForm.astro';
+import { all, first, run, str, int, oneOf, safeUrl, CHARACTER_STATUSES, NOW } from '../../../lib/db';
+const id = Number(Astro.params.id);
+const h = await first<any>('SELECT * FROM characters WHERE id=?', id);
+if (!h) return new Response('Not found', { status: 404 });
+const players = await all<any>('SELECT id,name FROM players WHERE archived_at IS NULL OR id=? ORDER BY name', h.player_id);
+const campaigns = await all<any>('SELECT id,name FROM campaigns WHERE archived_at IS NULL OR id=? ORDER BY name', h.campaign_id);
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const act = str(f, 'action');
+  if (act === 'archive') { await run(`UPDATE characters SET archived_at=${NOW}, updated_at=${NOW} WHERE id=?`, id); return Astro.redirect(`/players/${h.player_id}`); }
+  if (act === 'unarchive') { await run(`UPDATE characters SET archived_at=NULL, updated_at=${NOW} WHERE id=?`, id); return Astro.redirect(`/characters`); }
+  if (act === 'delete') { await run('DELETE FROM characters WHERE id=?', id); return Astro.redirect(`/players/${h.player_id}`); }
+  const url = str(f, 'dndbeyond_url');
+  if (!str(f, 'name')) error = 'Name is required.';
+  else if (url && !safeUrl(url)) error = 'That link is not a valid http(s) URL.';
+  else {
+    await run(`UPDATE characters SET player_id=?,campaign_id=?,name=?,class=?,level=?,dndbeyond_url=?,status=?,notes=?,updated_at=${NOW} WHERE id=?`,
+      int(f, 'player_id'), int(f, 'campaign_id'), str(f, 'name'), str(f, 'class'), int(f, 'level', 1), safeUrl(url),
+      oneOf(str(f, 'status'), CHARACTER_STATUSES, 'active'), str(f, 'notes'), id);
+    return Astro.redirect(`/players/${int(f, 'player_id')}`);
+  }
+}
+---
+<Layout title={`Edit ${h.name}`} active="players">
+  <h1>Edit character</h1>
+  {error && <p class="err">{error}</p>}
+  {h.dndbeyond_url && <p><a href={h.dndbeyond_url} target="_blank" rel="noopener noreferrer">Open on D&amp;D Beyond ↗</a></p>}
+  <form method="post"><CharacterForm h={h} players={players} campaigns={campaigns} />
+    <div class="actions"><button class="primary">Save</button><a class="btn" href={`/players/${h.player_id}`}>Cancel</a></div></form>
+  <h2>Danger zone</h2>
+  <form method="post" class="actions">
+    {h.archived_at ? <button name="action" value="unarchive">Restore</button> : <button name="action" value="archive">Archive</button>}
+    <button class="danger" name="action" value="delete" onclick="return confirm('Permanently delete this character?')">Delete (mistakes only)</button>
+  </form>
+</Layout>

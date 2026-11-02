@@ -1,0 +1,70 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Balance from '../../../components/Balance.astro';
+import { first, all, fmtDate, fmtDateTime, nowLocal, METHODS } from '../../../lib/db';
+import { formatMoney } from '../../../lib/money';
+const id = Number(Astro.params.id);
+const p = await first<any>('SELECT * FROM players WHERE id=?', id);
+if (!p) return new Response('Not found', { status: 404 });
+const tot = await first<any>(`SELECT
+  COALESCE((SELECT SUM(charge_cents) FROM session_attendees WHERE player_id=?1),0) AS charged,
+  COALESCE((SELECT SUM(amount_cents) FROM payments WHERE player_id=?1),0) AS paid`, id);
+const chars = await all<any>(`SELECT h.*, c.name AS campaign FROM characters h JOIN campaigns c ON c.id=h.campaign_id
+  WHERE h.player_id=? AND h.archived_at IS NULL ORDER BY h.status, h.name`, id);
+const history = await all<any>(`SELECT s.id, s.number, s.title, s.starts_at, s.status, c.name AS campaign, a.attended, a.charge_cents
+  FROM session_attendees a JOIN sessions s ON s.id=a.session_id JOIN campaigns c ON c.id=s.campaign_id
+  WHERE a.player_id=? ORDER BY s.starts_at DESC LIMIT 30`, id);
+const pays = await all<any>(`SELECT y.*, c.name AS campaign FROM payments y LEFT JOIN campaigns c ON c.id=y.campaign_id WHERE y.player_id=? ORDER BY y.paid_on DESC, y.id DESC LIMIT 30`, id);
+const campaigns = await all<any>(`SELECT DISTINCT c.id, c.name FROM campaigns c JOIN characters h ON h.campaign_id=c.id WHERE h.player_id=? AND c.archived_at IS NULL`, id);
+const today = nowLocal().date;
+---
+<Layout title={p.name} active="players">
+  <div class="row-between"><h1>{p.name}</h1><a class="btn" href={`/players/${id}/edit`}>Edit</a></div>
+  <p class="muted">{p.contact}{p.archived_at ? ' · archived' : !p.active ? ' · inactive' : ''}</p>
+  {p.notes && <p>{p.notes}</p>}
+
+  <div class="card">
+    <div class="row-between"><span>Balance</span><Balance cents={tot.charged - tot.paid} /></div>
+    <div class="muted">Charged {formatMoney(tot.charged)} · Paid {formatMoney(tot.paid)}</div>
+  </div>
+
+  <h2>Record payment</h2>
+  <form method="post" action={`/payments/new?player=${id}`} class="card">
+    <input type="hidden" name="paid_on" value={today} />
+    <input type="hidden" name="back" value={`/players/${id}`} />
+    {campaigns.length === 1 && <input type="hidden" name="campaign_id" value={campaigns[0].id} />}
+    <div class="grid2">
+      <div><label for="amount">Amount (€)</label><input id="amount" name="amount" inputmode="decimal" required placeholder={tot.charged - tot.paid > 0 ? ((tot.charged - tot.paid) / 100).toFixed(2) : '15'} /></div>
+      <div><label for="method">Method</label><select id="method" name="method">{METHODS.map((m) => <option>{m}</option>)}</select></div>
+    </div>
+    <div class="actions"><button class="primary">Save payment</button><a href={`/payments/new?player=${id}`}>more options</a></div>
+  </form>
+
+  <h2>Characters</h2>
+  {chars.map((h) => (
+    <div class="card row-between">
+      <span><a href={`/characters/${h.id}/edit`}><strong>{h.name}</strong></a> <span class="muted">{h.class} {h.level} · {h.campaign}</span></span>
+      <span>{h.status !== 'active' && <span class="chip">{h.status}</span>} {h.dndbeyond_url && <a href={h.dndbeyond_url} target="_blank" rel="noopener noreferrer">D&amp;D Beyond ↗</a>}</span>
+    </div>
+  ))}
+  <p><a href={`/characters/new?player=${id}`}>+ Add character</a></p>
+
+  <h2>Attendance</h2>
+  <div class="scroll"><table class="table">
+    {history.map((s) => (
+      <tr><td><a href={`/sessions/${s.id}`}>{s.campaign} #{s.number}</a><div class="muted">{fmtDateTime(s.starts_at)}</div></td>
+        <td>{s.attended ? '✓' : <span class="muted">{s.status === 'planned' ? '' : 'absent'}</span>}</td>
+        <td class="num">{s.charge_cents > 0 ? formatMoney(s.charge_cents) : ''}</td></tr>
+    ))}
+  </table></div>
+  {history.length === 0 && <p class="muted">No sessions yet.</p>}
+
+  <h2>Payments</h2>
+  <div class="scroll"><table class="table">
+    {pays.map((y) => (
+      <tr><td>{fmtDate(y.paid_on)}<div class="muted">{y.method}{y.campaign && ` · ${y.campaign}`}{y.note && ` · ${y.note}`}</div></td>
+        <td class="num">{formatMoney(y.amount_cents, y.currency)}</td><td><a href={`/payments/${y.id}/edit`}>edit</a></td></tr>
+    ))}
+  </table></div>
+  {pays.length === 0 && <p class="muted">No payments yet.</p>}
+</Layout>

@@ -1,0 +1,32 @@
+---
+import '../styles/global.css';
+interface Props { title?: string; active?: string }
+const { title = 'TTRPG Hearth', active = '' } = Astro.props;
+const q = Astro.url.searchParams.get('q') ?? '';
+const tabs = [
+  ['/', 'Home', 'home'], ['/campaigns', 'Campaigns', 'campaigns'], ['/sessions', 'Sessions', 'sessions'],
+  ['/players', 'Players', 'players'], ['/payments', 'Payments', 'payments'],
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#9a3412" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
+    <title>{title} · TTRPG Hearth</title>
+  </head>
+  <body>
+    <div class="top">
+      <form action="/search" method="get" role="search">
+        <input type="search" name="q" value={q} placeholder="Search campaigns, players, characters" aria-label="Search" />
+        <button>Go</button>
+      </form>
+    </div>
+    <main><slot /></main>
+    <nav class="tabs" aria-label="Main">
+      {tabs.map(([href, label, key]) => <a href={href} aria-current={active === key ? 'page' : undefined}>{label}</a>)}
+    </nav>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import SessionForm from '../../../components/SessionForm.astro';
+import { first, all, run, str, NOW } from '../../../lib/db';
+import { parseSessionForm, saveAttendees, attendeeCandidates } from '../../../lib/sessions';
+const id = Number(Astro.params.id);
+let s = await first<any>('SELECT * FROM sessions WHERE id=?', id);
+if (!s) return new Response('Not found', { status: 404 });
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  if (str(f, 'action') === 'delete') {
+    const used = await first<any>(`SELECT (SELECT COUNT(*) FROM session_attendees WHERE session_id=?1 AND charge_cents>0)+(SELECT COUNT(*) FROM payments WHERE session_id=?1) AS n`, id);
+    if (used!.n > 0) error = 'Cannot delete: it has charges or payments. Set it to cancelled instead.';
+    else { await run('DELETE FROM sessions WHERE id=?', id); return Astro.redirect(`/campaigns/${s.campaign_id}`); }
+  } else {
+    const parsed = await parseSessionForm(f, s.campaign_id);
+    if ('error' in parsed) error = parsed.error;
+    else {
+      const i = parsed.input;
+      await run(`UPDATE sessions SET title=?,starts_at=?,status=?,price_cents=?,prep_notes=?,recap=?,updated_at=${NOW} WHERE id=?`,
+        i.title, i.starts_at, i.status, i.price_cents, i.prep_notes, i.recap, id);
+      await saveAttendees(id, { ...i, campaign_id: s.campaign_id }, f);
+      return Astro.redirect(`/sessions/${id}`);
+    }
+  }
+}
+const candidates = await attendeeCandidates(s.campaign_id, id);
+const characters = await all<any>(`SELECT * FROM characters WHERE archived_at IS NULL AND status='active'`);
+---
+<Layout title={`Edit session ${s.number}`} active="sessions">
+  <h1>Edit session #{s.number}</h1>
+  {error && <p class="err">{error}</p>}
+  <form method="post">
+    <SessionForm s={s} campaignId={s.campaign_id} candidates={candidates} characters={characters} campaigns={[]} />
+    <div class="actions"><button class="primary">Save</button><a class="btn" href={`/sessions/${id}`}>Cancel</a></div>
+  </form>
+  <h2>Danger zone</h2>
+  <form method="post"><button class="danger" name="action" value="delete" onclick="return confirm('Permanently delete this session? Only possible if no charges or payments are attached.')">Delete (mistakes only)</button></form>
+</Layout>

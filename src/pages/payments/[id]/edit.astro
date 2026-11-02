@@ -1,0 +1,32 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import PaymentForm from '../../../components/PaymentForm.astro';
+import { all, first, run, str, NOW } from '../../../lib/db';
+import { parsePaymentForm } from '../../../lib/payments';
+const id = Number(Astro.params.id);
+const y = await first<any>('SELECT * FROM payments WHERE id=?', id);
+if (!y) return new Response('Not found', { status: 404 });
+const players = await all<any>('SELECT id,name FROM players ORDER BY name');
+const campaigns = await all<any>('SELECT id,name FROM campaigns ORDER BY name');
+let error = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  if (str(f, 'action') === 'delete') { await run('DELETE FROM payments WHERE id=?', id); return Astro.redirect(`/players/${y.player_id}`); }
+  const parsed = await parsePaymentForm(f);
+  if ('error' in parsed) error = parsed.error!;
+  else {
+    const i = parsed.input;
+    await run(`UPDATE payments SET player_id=?,campaign_id=?,amount_cents=?,method=?,paid_on=?,note=?,updated_at=${NOW} WHERE id=?`,
+      i.player_id, i.campaign_id ?? y.campaign_id, i.amount_cents, i.method, i.paid_on, i.note, id);
+    return Astro.redirect(`/players/${i.player_id}`);
+  }
+}
+---
+<Layout title="Edit payment" active="payments">
+  <h1>Edit payment</h1>
+  {error && <p class="err">{error}</p>}
+  <form method="post"><PaymentForm y={y} players={players} campaigns={campaigns} today={y.paid_on} sessionId={y.session_id} />
+    <div class="actions"><button class="primary">Save</button><a class="btn" href={`/players/${y.player_id}`}>Cancel</a></div></form>
+  <h2>Danger zone</h2>
+  <form method="post"><button class="danger" name="action" value="delete" onclick="return confirm('Delete this payment? The balance will change.')">Delete (mistakes only)</button></form>
+</Layout>
