@@ -8,7 +8,7 @@ const chars = await all<any>(`SELECT player_id, GROUP_CONCAT(name, ', ') AS name
 const byPlayer = new Map(chars.map((c) => [c.player_id, c.names]));
 ---
 <Layout title="Players" active="players">
-  <div class="row-between"><h1>Players</h1><a class="btn primary" href="/players/new">+ New</a></div>
+  <div class="row-between"><h1>The Party</h1><a class="btn primary" href="/players/new">+ New</a></div>
   {rows.map((p) => (
     <div class="card"><a class="row" href={`/players/${p.id}`}>
       <div class="row-between"><strong>{p.name}</strong><Balance cents={p.charged - p.paid} /></div>
