@@ -13,7 +13,7 @@ const total = rows.reduce((t, r) => t + r.amount_cents, 0);
 const qs = new URLSearchParams(Object.entries({ player: f.player ?? '', campaign: f.campaign ?? '', from: f.from, to: f.to }).filter(([, v]) => v !== '').map(([k, v]) => [k, String(v)])).toString();
 ---
 <Layout title="Payments" active="payments">
-  <div class="row-between"><h1>Payments</h1><a class="btn primary" href="/payments/new">+ Record</a></div>
+  <div class="row-between"><h1>Coin</h1><a class="btn primary" href="/payments/new">+ Record</a></div>
   <form method="get" class="card">
     <div class="grid2">
       <div><label for="player">Player</label><select id="player" name="player"><option value="">All</option>{players.map((p) => <option value={p.id} selected={p.id === f.player}>{p.name}</option>)}</select></div>
@@ -24,7 +24,7 @@ const qs = new URLSearchParams(Object.entries({ player: f.player ?? '', campaign
     <div class="actions"><button>Filter</button><a class="btn" href="/payments">Reset</a><a class="btn" href={`/export/payments.csv${qs ? `?${qs}` : ''}`}>Download CSV</a></div>
   </form>
   <p><strong>{rows.length}</strong> payments · <strong>{formatMoney(total)}</strong></p>
-  <div class="scroll"><table class="table">
+  <div class="scroll parchment"><table class="table">
     {rows.map((y) => (
       <tr><td>{fmtDate(y.paid_on)}<div class="muted"><a href={`/players/${y.player_id}`}>{y.player}</a> · {y.method}{y.campaign && ` · ${y.campaign}`}{y.session_number && ` #${y.session_number}`}</div></td>
         <td class="num">{formatMoney(y.amount_cents, y.currency)}<div><a href={`/payments/${y.id}/edit`}>edit</a></div></td></tr>

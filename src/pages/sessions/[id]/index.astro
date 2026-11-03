@@ -12,7 +12,7 @@ const att = await all<any>(`SELECT a.*, p.name AS player, h.name AS character FR
 <Layout title={`#${s.number} ${s.title}`} active="sessions">
   <div class="row-between"><h1>#{s.number} {s.title}</h1><a class="btn" href={`/sessions/${id}/edit`}>Edit</a></div>
   <p class="muted"><a href={`/campaigns/${s.campaign_id}`}>{s.campaign}</a> · {fmtDateTime(s.starts_at)} · <span class="chip">{s.status}</span>{s.is_paid ? ` · ${formatMoney(s.price_cents)} each` : ''}</p>
-  <h2>Attendees</h2>
+  <h2>The company</h2>
   {att.map((a) => (
     <div class="card row-between">
       <span><a href={`/players/${a.player_id}`}><strong>{a.player}</strong></a>{a.character && <span class="muted"> as {a.character}</span>}</span>
@@ -21,6 +21,6 @@ const att = await all<any>(`SELECT a.*, p.name AS player, h.name AS character FR
     </div>
   ))}
   {att.length === 0 && <p class="muted">No attendees recorded.</p>}
-  {s.prep_notes && <><h2>Prep notes</h2><div class="md" set:html={renderMarkdown(s.prep_notes)} /></>}
-  {s.recap && <><h2>Recap</h2><div class="md" set:html={renderMarkdown(s.recap)} /></>}
+  {s.prep_notes && <><h2>Dungeon Master's eyes only</h2><div class="md" set:html={renderMarkdown(s.prep_notes)} /></>}
+  {s.recap && <><h2>The chronicle</h2><div class="parchment chronicle md" set:html={renderMarkdown(s.recap)} /></>}
 </Layout>

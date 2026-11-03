@@ -23,12 +23,13 @@ const today = nowLocal().date;
   <p class="muted">{p.contact}{p.archived_at ? ' · archived' : !p.active ? ' · inactive' : ''}</p>
   {p.notes && <p>{p.notes}</p>}
 
-  <div class="card">
-    <div class="row-between"><span>Balance</span><Balance cents={tot.charged - tot.paid} /></div>
+  <div class="card parchment" style="text-align:center">
+    <div class="muted" style="letter-spacing:.2em;text-transform:uppercase;font-size:.75rem">Balance</div>
+    <div class="amount"><Balance cents={tot.charged - tot.paid} /></div>
     <div class="muted">Charged {formatMoney(tot.charged)} · Paid {formatMoney(tot.paid)}</div>
   </div>
 
-  <h2>Record payment</h2>
+  <h2>Record coin</h2>
   <form method="post" action={`/payments/new?player=${id}`} class="card">
     <input type="hidden" name="paid_on" value={today} />
     <input type="hidden" name="back" value={`/players/${id}`} />
@@ -37,7 +38,7 @@ const today = nowLocal().date;
       <div><label for="amount">Amount (€)</label><input id="amount" name="amount" inputmode="decimal" required placeholder={tot.charged - tot.paid > 0 ? ((tot.charged - tot.paid) / 100).toFixed(2) : '15'} /></div>
       <div><label for="method">Method</label><select id="method" name="method">{METHODS.map((m) => <option>{m}</option>)}</select></div>
     </div>
-    <div class="actions"><button class="primary">Save payment</button><a href={`/payments/new?player=${id}`}>more options</a></div>
+    <div class="actions"><button class="primary">Seal payment</button><a href={`/payments/new?player=${id}`}>more options</a></div>
   </form>
 
   <h2>Characters</h2>
@@ -50,7 +51,7 @@ const today = nowLocal().date;
   <p><a href={`/characters/new?player=${id}`}>+ Add character</a></p>
 
   <h2>Attendance</h2>
-  <div class="scroll"><table class="table">
+  <div class="scroll parchment"><table class="table">
     {history.map((s) => (
       <tr><td><a href={`/sessions/${s.id}`}>{s.campaign} #{s.number}</a><div class="muted">{fmtDateTime(s.starts_at)}</div></td>
         <td>{s.attended ? '✓' : <span class="muted">{s.status === 'planned' ? '' : 'absent'}</span>}</td>
@@ -59,8 +60,8 @@ const today = nowLocal().date;
   </table></div>
   {history.length === 0 && <p class="muted">No sessions yet.</p>}
 
-  <h2>Payments</h2>
-  <div class="scroll"><table class="table">
+  <h2>The ledger</h2>
+  <div class="scroll parchment"><table class="table">
     {pays.map((y) => (
       <tr><td>{fmtDate(y.paid_on)}<div class="muted">{y.method}{y.campaign && ` · ${y.campaign}`}{y.note && ` · ${y.note}`}</div></td>
         <td class="num">{formatMoney(y.amount_cents, y.currency)}</td><td><a href={`/payments/${y.id}/edit`}>edit</a></td></tr>

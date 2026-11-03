@@ -44,14 +44,12 @@ npm run deploy     # build, apply remote migrations, wrangler deploy
 
 The D1 database `ttrpg-hearth` is already bound in `wrangler.jsonc`. The seed data is for local use only; don't load it in production.
 
-### Put Cloudflare Access in front (required before using for real)
+### Auth: Cloudflare Access
 
-The Worker has **no auth code**. Protection is Cloudflare Access, and `wrangler.jsonc` ships with `workers_dev: false` so the app is not reachable until you do this:
-
-1. Cloudflare dashboard → **Zero Trust** → enable it (free plan, up to 50 users).
-2. **Workers & Pages → ttrpg-hearth → Settings → Domains & Routes**: enable the `workers.dev` route and **Enable Cloudflare Access** (or add a custom domain and create an Access application for it).
-3. Policy: **Allow → Emails → your email**.
-4. Set `"workers_dev": true` in `wrangler.jsonc` so later deploys keep it enabled, then `npm run deploy`.
+The Worker has **no auth code**. The workers.dev route is protected by a Cloudflare Access application
+(Zero Trust, free plan) with a single Allow policy for the owner's email. Manage it in the dashboard under
+Zero Trust -> Access -> Applications -> "ttrpg-hearth". Do not set `workers_dev` to false unless you want the app offline.
+Locally there is no auth.
 
 ## Backup
 

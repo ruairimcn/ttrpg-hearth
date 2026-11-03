@@ -10,7 +10,7 @@ const rows = await all<any>(`
   FROM campaigns c WHERE (?1=1 OR c.archived_at IS NULL) ORDER BY c.archived_at IS NOT NULL, c.status='finished', c.name`, showArchived ? 1 : 0);
 ---
 <Layout title="Campaigns" active="campaigns">
-  <div class="row-between"><h1>Campaigns</h1><a class="btn primary" href="/campaigns/new">+ New</a></div>
+  <div class="row-between"><h1>Realms</h1><a class="btn primary" href="/campaigns/new">+ New</a></div>
   {rows.map((c) => (
     <div class="card"><a class="row" href={`/campaigns/${c.id}`}>
       <div class="row-between"><strong>{c.name}</strong><span class="chip">{c.archived_at ? 'archived' : c.status}</span></div>

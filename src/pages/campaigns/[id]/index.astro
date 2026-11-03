@@ -24,7 +24,7 @@ const owing = (await all<any>(`${BALANCE_SQL} WHERE p.archived_at IS NULL`, id))
 
   {c.is_paid ? (<>
     <h2>Money</h2>
-    <div class="card">
+    <div class="card parchment">
       <div class="row-between"><span>Charged</span><strong>{formatMoney(money.charged)}</strong></div>
       <div class="row-between"><span>Paid (to this campaign)</span><strong>{formatMoney(money.paid)}</strong></div>
       <div class="row-between"><span>Outstanding</span><Balance cents={money.charged - money.paid} /></div>
@@ -32,7 +32,7 @@ const owing = (await all<any>(`${BALANCE_SQL} WHERE p.archived_at IS NULL`, id))
     {owing.map((r) => <div class="row-between muted"><a href={`/players/${r.id}`}>{r.name}</a><Balance cents={r.charged - r.paid} /></div>)}
   </>) : null}
 
-  <h2>Party</h2>
+  <h2>The party</h2>
   {party.map((h) => (
     <div class="card row-between">
       <span><a href={`/characters/${h.id}/edit`}><strong>{h.name}</strong></a> <span class="muted">{h.class} {h.level} · {h.player}</span></span>
@@ -41,7 +41,7 @@ const owing = (await all<any>(`${BALANCE_SQL} WHERE p.archived_at IS NULL`, id))
   ))}
   {party.length === 0 && <p class="muted">No characters yet.</p>}
 
-  <h2>Sessions</h2>
+  <h2>Quests</h2>
   {sessions.map((s) => (
     <div class="card"><a class="row" href={`/sessions/${s.id}`}>
       <div class="row-between"><strong>#{s.number} {s.title}</strong><span class="chip">{s.status}</span></div>

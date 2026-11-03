@@ -4,8 +4,11 @@ interface Props { title?: string; active?: string }
 const { title = 'TTRPG Hearth', active = '' } = Astro.props;
 const q = Astro.url.searchParams.get('q') ?? '';
 const tabs = [
-  ['/', 'Home', 'home'], ['/campaigns', 'Campaigns', 'campaigns'], ['/sessions', 'Sessions', 'sessions'],
-  ['/players', 'Players', 'players'], ['/payments', 'Payments', 'payments'],
+  ['/', 'Hearth', 'home', 'M12 3c1 3.5 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .5 2 1.5 2.5 2 2 .5-3-1-5 1-8z'],
+  ['/campaigns', 'Realms', 'campaigns', 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z'],
+  ['/sessions', 'Quests', 'sessions', 'M6 3h10a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2H8a2 2 0 0 1-2-2zM9 8h6M9 12h6'],
+  ['/players', 'Party', 'players', 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.5-3.5 3-5.5 6.5-5.5s6 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.7c1.8.7 3 2.5 3.5 5.3'],
+  ['/payments', 'Coin', 'payments', 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 8v8M9.5 10c0-1 1-1.5 2.5-1.5s2.5.6 2.5 1.5-1 1.3-2.5 1.5-2.5.7-2.5 1.5 1 1.5 2.5 1.5 2.5-.5 2.5-1.5'],
 ];
 ---
 <!doctype html>
@@ -13,20 +16,34 @@ const tabs = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#9a3412" />
+    <meta name="theme-color" content="#1a130e" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
     <title>{title} · TTRPG Hearth</title>
   </head>
   <body>
     <div class="top">
-      <form action="/search" method="get" role="search">
-        <input type="search" name="q" value={q} placeholder="Search campaigns, players, characters" aria-label="Search" />
-        <button>Go</button>
-      </form>
+      <div class="bar">
+        <a class="brand" href="/" aria-label="TTRPG Hearth home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#d6b25e" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l8 4.6v9.8l-8 4.6-8-4.6V7.1z" /><path d="M12 2.5v19M4 7.1l16 9.8M20 7.1L4 16.9" stroke-width="1" /></svg>
+          <span>HEARTH</span>
+        </a>
+        <form action="/search" method="get" role="search">
+          <input type="search" name="q" value={q} placeholder="Search…" aria-label="Search" />
+          <button>Go</button>
+        </form>
+      </div>
     </div>
     <main><slot /></main>
     <nav class="tabs" aria-label="Main">
-      {tabs.map(([href, label, key]) => <a href={href} aria-current={active === key ? 'page' : undefined}>{label}</a>)}
+      {tabs.map(([href, label, key, d]) => (
+        <a href={href} aria-current={active === key ? 'page' : undefined}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={d} /></svg>
+          {label}
+        </a>
+      ))}
     </nav>
   </body>
 </html>

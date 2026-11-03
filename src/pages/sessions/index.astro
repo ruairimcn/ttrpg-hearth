@@ -10,7 +10,7 @@ const rows = await all<any>(`SELECT s.*, c.name AS campaign FROM sessions s JOIN
 const link = (v: string) => `/sessions?view=${v}${camp ? `&campaign=${camp}` : ''}`;
 ---
 <Layout title="Sessions" active="sessions">
-  <div class="row-between"><h1>Sessions</h1><a class="btn primary" href={`/sessions/new${camp ? `?campaign=${camp}` : ''}`}>+ New</a></div>
+  <div class="row-between"><h1>Quests</h1><a class="btn primary" href={`/sessions/new${camp ? `?campaign=${camp}` : ''}`}>+ New</a></div>
   <div class="filters">
     {['upcoming', 'past', 'all'].map((v) => <a href={link(v)} aria-current={view === v ? 'true' : undefined}>{v}</a>)}
   </div>
